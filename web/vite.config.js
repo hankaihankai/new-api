@@ -27,9 +27,19 @@ const { vitePluginSemi } = pkg;
 // https://vitejs.dev/config/
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      {
+        find: '@',
+        replacement: path.resolve(__dirname, './src'),
+      },
+      {
+        find: /^~@douyinfe\/semi-theme-default/,
+        replacement: path.resolve(
+          __dirname,
+          './node_modules/@douyinfe/semi-theme-default',
+        ),
+      },
+    ],
   },
   plugins: [
     codeInspectorPlugin({
