@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/QuantumNous/new-api/controller"
+	"github.com/QuantumNous/new-api/controller/user_manager"
 	"github.com/QuantumNous/new-api/middleware"
 
 	// Import oauth package to register providers via init()
@@ -53,6 +54,12 @@ func SetApiRouter(router *gin.Engine) {
 
 		// Universal secure verification routes
 		apiRouter.POST("/verify", middleware.UserAuth(), middleware.CriticalRateLimit(), controller.UniversalVerify)
+
+		userManagerRoute := apiRouter.Group("/user-manager")
+		userManagerRoute.Use(user_manager.Auth())
+		{
+			userManagerRoute.POST("/users", user_manager.CreateUserWithDefaultToken)
+		}
 
 		userRoute := apiRouter.Group("/user")
 		{

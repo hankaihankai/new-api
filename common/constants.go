@@ -95,6 +95,9 @@ var WeChatServerAddress = ""
 var WeChatServerToken = ""
 var WeChatAccountQRCodeImageURL = ""
 
+// UserManagerAuthKey 外部用户管理接口固定授权码。
+var UserManagerAuthKey = ""
+
 var TurnstileSiteKey = ""
 var TurnstileSecretKey = ""
 
