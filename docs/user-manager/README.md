@@ -78,6 +78,109 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 - 默认令牌为无限额度。
 - 响应中的 `token_key` 是完整 `sk-` 令牌，可直接用于模型转发接口。
 
+## 查询用户统计
+
+```http
+GET /api/user-manager/users/{user_id}/stats
+Authorization: Bearer <USER_MANAGER_AUTH_KEY>
+```
+
+可选 query 参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `start_timestamp` | 统计开始 Unix 时间戳，秒 |
+| `end_timestamp` | 统计结束 Unix 时间戳，秒 |
+
+成功响应：
+
+```json
+{
+  "success": true,
+  "message": "",
+  "data": {
+    "user_id": 123,
+    "username": "testuser",
+    "account_data": {
+      "current_balance": 0,
+      "historical_consumption": 0
+    },
+    "usage_stats": {
+      "request_count": 0,
+      "stat_count": 0
+    },
+    "resource_consumption": {
+      "stat_quota": 0,
+      "stat_tokens": 0
+    },
+    "performance_metrics": {
+      "avg_rpm": 0,
+      "avg_tpm": 0,
+      "recent_rpm": 0,
+      "recent_tpm": 0
+    }
+  }
+}
+```
+
+字段对应关系：
+
+| 截图模块 | 字段 |
+| --- | --- |
+| 账户数据 / 当前余额 | `account_data.current_balance` |
+| 账户数据 / 历史消耗 | `account_data.historical_consumption` |
+| 使用统计 / 请求次数 | `usage_stats.request_count` |
+| 使用统计 / 统计次数 | `usage_stats.stat_count` |
+| 资源消耗 / 统计额度 | `resource_consumption.stat_quota` |
+| 资源消耗 / 统计Tokens | `resource_consumption.stat_tokens` |
+| 性能指标 / 平均RPM | `performance_metrics.avg_rpm` |
+| 性能指标 / 平均TPM | `performance_metrics.avg_tpm` |
+
+`avg_rpm` 和 `avg_tpm` 仅在同时传入有效 `start_timestamp`、`end_timestamp` 时按该时间段计算；`recent_rpm` 和 `recent_tpm` 固定统计最近 60 秒。
+
+## 查询用户调用记录
+
+```http
+GET /api/user-manager/users/{user_id}/logs
+Authorization: Bearer <USER_MANAGER_AUTH_KEY>
+```
+
+分页参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `p` | 页码，默认 1 |
+| `page_size` | 每页数量，默认使用系统分页配置，最大 100 |
+
+过滤参数：
+
+| 参数 | 说明 |
+| --- | --- |
+| `type` | 日志类型；不传或传 0 时查询全部类型 |
+| `start_timestamp` | 开始 Unix 时间戳，秒 |
+| `end_timestamp` | 结束 Unix 时间戳，秒 |
+| `model_name` | 模型名称，支持现有日志查询的模糊匹配规则 |
+| `token_name` | 令牌名称 |
+| `group` | 分组 |
+| `request_id` | 请求 ID |
+
+成功响应：
+
+```json
+{
+  "success": true,
+  "message": "",
+  "data": {
+    "page": 1,
+    "page_size": 20,
+    "total": 0,
+    "items": []
+  }
+}
+```
+
+`items` 内字段沿用系统现有调用日志结构，例如 `created_at`、`type`、`username`、`token_name`、`model_name`、`quota`、`prompt_tokens`、`completion_tokens`、`channel`、`request_id` 等。
+
 ## 错误场景
 
 | 场景 | 结果 |

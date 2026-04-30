@@ -16,6 +16,8 @@ version: '3.4' # For compatibility with older Docker versions
 
 services:
   new-api:
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     build:
       context: .
       dockerfile: Dockerfile
@@ -30,8 +32,8 @@ services:
       - ./logs:/app/logs
     environment:
 #      - SQL_DSN=postgresql://root:123456@postgres:5432/new-api # ⚠️ IMPORTANT: Change the password in production!
-      - SQL_DSN=root:123456@tcp(localhost:3306)/new_api  # Point to the mysql service, uncomment if using MySQL
-      - REDIS_CONN_STRING=redis://:123456@localhost:6379 # ⚠️ IMPORTANT: Change the password in production!
+      - SQL_DSN=root:123456@tcp(host.docker.internal:3306)/new_api  # Point to the mysql service, uncomment if using MySQL
+      - REDIS_CONN_STRING=redis://:123456@new-api-redis:6379 # ⚠️ IMPORTANT: Change the password in production!
       - TZ=Asia/Shanghai
       - ERROR_LOG_ENABLED=true # 是否启用错误日志记录 (Whether to enable error log recording)
       - BATCH_UPDATE_ENABLED=true  # 是否启用批量更新 (Whether to enable batch update)
@@ -48,7 +50,7 @@ services:
 ##      - postgres
 #      - mysql  # Uncomment if using MySQL
     networks:
-      - new-api-network
+      - new-api_new-api-network
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:3000/api/status | grep -o '\"success\":\\s*true' || exit 1"]
       interval: 30s
@@ -61,7 +63,7 @@ services:
 #    restart: always
 #    command: ["redis-server", "--requirepass", "123456"]  # ⚠️ IMPORTANT: Change this password in production!
 #    networks:
-#      - new-api-network
+#      - new-api_new-api-network
 
 #  postgres:
 #    image: postgres:15
@@ -74,7 +76,7 @@ services:
 #    volumes:
 #      - pg_data:/var/lib/postgresql/data
 #    networks:
-#      - new-api-network
+#      - new-api_new-api-network
 #    ports:
 #      - "5432:5432"  # Uncomment if you need to access PostgreSQL from outside Docker
 
@@ -88,7 +90,7 @@ services:
 #    volumes:
 #      - mysql_data:/var/lib/mysql
 #    networks:
-#      - new-api-network
+#      - new-api_new-api-network
 #    ports:
 #      - "3306:3306"  # Uncomment if you need to access MySQL from outside Docker
 
@@ -97,5 +99,5 @@ volumes:
 #  mysql_data:
 
 networks:
-  new-api-network:
+  new-api_new-api-network:
     driver: bridge
