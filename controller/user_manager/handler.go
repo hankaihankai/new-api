@@ -1,12 +1,14 @@
 package user_manager
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
+	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
 
 	"github.com/gin-gonic/gin"
@@ -207,6 +209,78 @@ func GetUserQuotaRecords(c *gin.Context) {
 	pageInfo.SetTotal(int(total))
 	pageInfo.SetItems(records)
 	common.ApiSuccess(c, pageInfo)
+}
+
+// SetUserQuota 设置用户额度（增加、减少或覆盖）。
+func SetUserQuota(c *gin.Context) {
+	userId, err := strconv.Atoi(c.Param("id"))
+	if err != nil || userId <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	var req SetUserQuotaRequest
+	if err := common.DecodeJson(c.Request.Body, &req); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+	if err := common.Validate.Struct(&req); err != nil {
+		common.ApiErrorI18n(c, i18n.MsgUserInputInvalid, map[string]any{"Error": err.Error()})
+		return
+	}
+
+	user, err := model.GetUserById(userId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if user.Id == 0 {
+		common.ApiErrorI18n(c, i18n.MsgUserNotExists)
+		return
+	}
+
+	adminInfo := map[string]interface{}{
+		"admin_id":       0,
+		"admin_username": "user_manager",
+	}
+
+	switch req.Mode {
+	case "add":
+		if req.Value <= 0 {
+			common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
+			return
+		}
+		if err := model.IncreaseUserQuota(user.Id, req.Value, true); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
+			fmt.Sprintf("user_manager 增加用户额度 %s", logger.LogQuota(req.Value)), adminInfo)
+	case "subtract":
+		if req.Value <= 0 {
+			common.ApiErrorI18n(c, i18n.MsgUserQuotaChangeZero)
+			return
+		}
+		if err := model.DecreaseUserQuota(user.Id, req.Value, true); err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
+			fmt.Sprintf("user_manager 减少用户额度 %s", logger.LogQuota(req.Value)), adminInfo)
+	case "override":
+		oldQuota := user.Quota
+		if err := model.DB.Model(&model.User{}).Where("id = ?", user.Id).Update("quota", req.Value).Error; err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		model.RecordLogWithAdminInfo(user.Id, model.LogTypeManage,
+			fmt.Sprintf("user_manager 覆盖用户额度从 %s 为 %s", logger.LogQuota(oldQuota), logger.LogQuota(req.Value)), adminInfo)
+	default:
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	common.ApiSuccess(c, nil)
 }
 
 // queryUserQuotaDataAggregate 查询用户指定时间范围内的用量统计。

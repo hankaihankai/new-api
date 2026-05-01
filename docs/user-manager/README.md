@@ -199,6 +199,46 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 | `count` | 请求次数 |
 | `quota` | 消耗额度 |
 
+## 设置用户额度
+
+```http
+POST /api/user-manager/users/{user_id}/quota
+Content-Type: application/json
+Authorization: Bearer <USER_MANAGER_AUTH_KEY>
+```
+
+请求体：
+
+```json
+{
+  "mode": "add",
+  "value": 500000
+}
+```
+
+字段说明：
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `mode` | 是 | 操作模式：`add`（增加）、`subtract`（减少）、`override`（覆盖） |
+| `value` | 是 | 额度值；`add`/`subtract` 时必须大于 0 |
+
+成功响应：
+
+```json
+{
+  "success": true,
+  "message": ""
+}
+```
+
+行为说明：
+
+- `add`：在用户当前额度基础上增加 `value`。
+- `subtract`：在用户当前额度基础上减少 `value`；若用户额度不足，会返回错误。
+- `override`：直接将用户额度覆盖为 `value`，不依赖当前额度。
+- 每次操作都会写入管理日志，标记来源为 `user_manager`。
+
 ## 错误场景
 
 | 场景 | 结果 |

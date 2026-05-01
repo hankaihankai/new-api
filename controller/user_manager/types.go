@@ -83,3 +83,11 @@ type UserStatsPerformanceData struct {
 	// AvgTPM 平均 TPM。
 	AvgTPM float64 `json:"avg_tpm"`
 }
+
+// SetUserQuotaRequest 设置用户额度请求。
+type SetUserQuotaRequest struct {
+	// Mode 操作模式：add（增加）、subtract（减少）、override（覆盖）。
+	Mode string `json:"mode" validate:"required,oneof=add subtract override"`
+	// Value 额度值。
+	Value int `json:"value" validate:"required"`
+}

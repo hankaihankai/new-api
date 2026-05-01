@@ -61,6 +61,7 @@ func SetApiRouter(router *gin.Engine) {
 			userManagerRoute.POST("/users", user_manager.CreateUserWithDefaultToken)
 			userManagerRoute.GET("/users/:id/stats", user_manager.GetUserStats)
 			userManagerRoute.GET("/users/:id/quota/records", user_manager.GetUserQuotaRecords)
+			userManagerRoute.POST("/users/:id/quota", user_manager.SetUserQuota)
 		}
 
 		userRoute := apiRouter.Group("/user")
