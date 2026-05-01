@@ -149,10 +149,10 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 - `stat_count`、`stat_quota`、`stat_tokens` 来自 `quota_data` 表，其中 `stat_tokens` 使用 `quota_data.token_used` 汇总。
 - `avg_rpm` 和 `avg_tpm` 仅在同时传入有效 `start_timestamp`、`end_timestamp` 时按该时间段计算。
 
-## 查询用户调用记录
+## 查询用户额度调用记录
 
 ```http
-GET /api/user-manager/users/{user_id}/logs
+GET /api/user-manager/users/{user_id}/quota/records
 Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 ```
 
@@ -167,13 +167,9 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 
 | 参数 | 说明 |
 | --- | --- |
-| `type` | 日志类型；不传或传 0 时查询全部类型 |
 | `start_timestamp` | 开始 Unix 时间戳，秒 |
 | `end_timestamp` | 结束 Unix 时间戳，秒 |
-| `model_name` | 模型名称，支持现有日志查询的模糊匹配规则 |
-| `token_name` | 令牌名称 |
-| `group` | 分组 |
-| `request_id` | 请求 ID |
+| `model_name` | 模型名称，精确匹配 |
 
 成功响应：
 
@@ -190,7 +186,18 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 }
 ```
 
-`items` 内字段沿用系统现有调用日志结构，例如 `created_at`、`type`、`username`、`token_name`、`model_name`、`quota`、`prompt_tokens`、`completion_tokens`、`channel`、`request_id` 等。
+`items` 内字段来自 `quota_data` 表，结构如下：
+
+| 字段 | 说明 |
+| --- | --- |
+| `id` | 记录 ID |
+| `user_id` | 用户 ID |
+| `username` | 用户名 |
+| `model_name` | 模型名称 |
+| `created_at` | 记录时间，Unix 时间戳，秒，精确到小时 |
+| `token_used` | 消耗 Token 数 |
+| `count` | 请求次数 |
+| `quota` | 消耗额度 |
 
 ## 错误场景
 

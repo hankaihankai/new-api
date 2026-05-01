@@ -136,3 +136,29 @@ func GetAllQuotaDates(startTime int64, endTime int64, username string) (quotaDat
 	err = DB.Table("quota_data").Select("model_name, sum(count) as count, sum(quota) as quota, sum(token_used) as token_used, created_at").Where("created_at >= ? and created_at <= ?", startTime, endTime).Group("model_name, created_at").Find(&quotaDatas).Error
 	return quotaDatas, err
 }
+
+func GetUserQuotaRecords(userId int, startTimestamp int64, endTimestamp int64, modelName string, startIdx int, num int) (quotaData []*QuotaData, total int64, err error) {
+	var tx *gorm.DB
+	tx = DB.Table("quota_data").Where("user_id = ?", userId)
+
+	if startTimestamp > 0 {
+		tx = tx.Where("created_at >= ?", startTimestamp)
+	}
+	if endTimestamp > 0 {
+		tx = tx.Where("created_at <= ?", endTimestamp)
+	}
+	if modelName != "" {
+		tx = tx.Where("model_name = ?", modelName)
+	}
+	err = tx.Model(&QuotaData{}).Count(&total).Error
+	if err != nil {
+		common.SysError("failed to count user quota records: " + err.Error())
+		return nil, 0, err
+	}
+	err = tx.Order("created_at desc").Limit(num).Offset(startIdx).Find(&quotaData).Error
+	if err != nil {
+		common.SysError("failed to query user quota records: " + err.Error())
+		return nil, 0, err
+	}
+	return quotaData, total, nil
+}

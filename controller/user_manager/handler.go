@@ -187,7 +187,7 @@ func GetUserStats(c *gin.Context) {
 	})
 }
 
-// GetUserQuotaDatas 根据用户 ID 分页查询个人调用记录。
+// GetUserQuotaRecords 根据用户 ID 分页查询个人额度调用记录。
 func GetUserQuotaRecords(c *gin.Context) {
 	userId, err := strconv.Atoi(c.Param("id"))
 	if err != nil || userId <= 0 {
@@ -195,21 +195,17 @@ func GetUserQuotaRecords(c *gin.Context) {
 		return
 	}
 	pageInfo := common.GetPageQuery(c)
-	logType, _ := strconv.Atoi(c.Query("type"))
 	startTimestamp, _ := strconv.ParseInt(c.Query("start_timestamp"), 10, 64)
 	endTimestamp, _ := strconv.ParseInt(c.Query("end_timestamp"), 10, 64)
-	tokenName := c.Query("token_name")
 	modelName := c.Query("model_name")
-	group := c.Query("group")
-	requestId := c.Query("request_id")
 
-	logs, total, err := model.GetUserLogs(userId, logType, startTimestamp, endTimestamp, modelName, tokenName, pageInfo.GetStartIdx(), pageInfo.GetPageSize(), group, requestId)
+	records, total, err := model.GetUserQuotaRecords(userId, startTimestamp, endTimestamp, modelName, pageInfo.GetStartIdx(), pageInfo.GetPageSize())
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
 	pageInfo.SetTotal(int(total))
-	pageInfo.SetItems(logs)
+	pageInfo.SetItems(records)
 	common.ApiSuccess(c, pageInfo)
 }
 
