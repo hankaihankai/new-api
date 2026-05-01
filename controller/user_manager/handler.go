@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/i18n"
@@ -13,7 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// userStatsAggregate 用户日志统计聚合结果。
+// userStatsAggregate 用户用量数据聚合结果。
 type userStatsAggregate struct {
 	// StatCount 统计次数。
 	StatCount int64
@@ -21,14 +20,6 @@ type userStatsAggregate struct {
 	StatQuota int
 	// StatTokens 统计 Tokens。
 	StatTokens int
-}
-
-// userRecentPerformanceAggregate 用户最近性能聚合结果。
-type userRecentPerformanceAggregate struct {
-	// RecentRPM 最近 60 秒 RPM。
-	RecentRPM int64
-	// RecentTPM 最近 60 秒 TPM。
-	RecentTPM int64
 }
 
 // CreateUserWithDefaultToken 创建普通用户并同时创建默认无限额度令牌。
@@ -147,12 +138,7 @@ func GetUserStats(c *gin.Context) {
 		return
 	}
 
-	stats, err := queryUserStatsAggregate(userId, startTimestamp, endTimestamp)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-	recent, err := queryUserRecentPerformance(userId)
+	stats, err := queryUserQuotaDataAggregate(userId, startTimestamp, endTimestamp)
 	if err != nil {
 		common.ApiError(c, err)
 		return
@@ -166,6 +152,8 @@ func GetUserStats(c *gin.Context) {
 		avgTPM = float64(stats.StatTokens) / timeDiffMinutes
 	}
 
+	totalQuota := user.Quota + user.UsedQuota
+	quotaPerUnit := common.QuotaPerUnit
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "",
@@ -175,6 +163,13 @@ func GetUserStats(c *gin.Context) {
 			AccountData: UserStatsAccountData{
 				CurrentBalance:        user.Quota,
 				HistoricalConsumption: user.UsedQuota,
+				Quota:                 user.Quota,
+				UsedQuota:             user.UsedQuota,
+				TotalQuota:            totalQuota,
+				CurrentBalanceAmount:  quotaToAmount(user.Quota, quotaPerUnit),
+				UsedQuotaAmount:       quotaToAmount(user.UsedQuota, quotaPerUnit),
+				TotalQuotaAmount:      quotaToAmount(totalQuota, quotaPerUnit),
+				QuotaPerUnit:          quotaPerUnit,
 			},
 			UsageStats: UserStatsUsageData{
 				RequestCount: user.RequestCount,
@@ -185,17 +180,15 @@ func GetUserStats(c *gin.Context) {
 				StatTokens: stats.StatTokens,
 			},
 			PerformanceMetrics: UserStatsPerformanceData{
-				AvgRPM:    avgRPM,
-				AvgTPM:    avgTPM,
-				RecentRPM: recent.RecentRPM,
-				RecentTPM: recent.RecentTPM,
+				AvgRPM: avgRPM,
+				AvgTPM: avgTPM,
 			},
 		},
 	})
 }
 
-// GetUserLogs 根据用户 ID 分页查询个人调用记录。
-func GetUserLogs(c *gin.Context) {
+// GetUserQuotaDatas 根据用户 ID 分页查询个人调用记录。
+func GetUserQuotaRecords(c *gin.Context) {
 	userId, err := strconv.Atoi(c.Param("id"))
 	if err != nil || userId <= 0 {
 		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
@@ -220,12 +213,12 @@ func GetUserLogs(c *gin.Context) {
 	common.ApiSuccess(c, pageInfo)
 }
 
-// queryUserStatsAggregate 查询用户指定时间范围内的日志统计。
-func queryUserStatsAggregate(userId int, startTimestamp int64, endTimestamp int64) (userStatsAggregate, error) {
+// queryUserQuotaDataAggregate 查询用户指定时间范围内的用量统计。
+func queryUserQuotaDataAggregate(userId int, startTimestamp int64, endTimestamp int64) (userStatsAggregate, error) {
 	var stats userStatsAggregate
-	query := model.LOG_DB.Model(&model.Log{}).Select(
-		"COUNT(*) AS stat_count, COALESCE(SUM(quota), 0) AS stat_quota, COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) AS stat_tokens",
-	).Where("user_id = ? AND type = ?", userId, model.LogTypeConsume)
+	query := model.DB.Model(&model.QuotaData{}).Select(
+		"COALESCE(SUM(count), 0) AS stat_count, COALESCE(SUM(quota), 0) AS stat_quota, COALESCE(SUM(token_used), 0) AS stat_tokens",
+	).Where("user_id = ?", userId)
 	if startTimestamp > 0 {
 		query = query.Where("created_at >= ?", startTimestamp)
 	}
@@ -233,21 +226,16 @@ func queryUserStatsAggregate(userId int, startTimestamp int64, endTimestamp int6
 		query = query.Where("created_at <= ?", endTimestamp)
 	}
 	if err := query.Scan(&stats).Error; err != nil {
-		common.SysError("failed to query user stats: " + err.Error())
+		common.SysError("failed to query user quota data stats: " + err.Error())
 		return stats, err
 	}
 	return stats, nil
 }
 
-// queryUserRecentPerformance 查询用户最近 60 秒的 RPM/TPM。
-func queryUserRecentPerformance(userId int) (userRecentPerformanceAggregate, error) {
-	var stats userRecentPerformanceAggregate
-	err := model.LOG_DB.Model(&model.Log{}).Select(
-		"COUNT(*) AS recent_rpm, COALESCE(SUM(prompt_tokens), 0) + COALESCE(SUM(completion_tokens), 0) AS recent_tpm",
-	).Where("user_id = ? AND type = ? AND created_at >= ?", userId, model.LogTypeConsume, time.Now().Add(-60*time.Second).Unix()).Scan(&stats).Error
-	if err != nil {
-		common.SysError("failed to query user recent performance: " + err.Error())
-		return stats, err
+// quotaToAmount 将数据库额度换算为金额数值。
+func quotaToAmount(quota int, quotaPerUnit float64) float64 {
+	if quotaPerUnit <= 0 {
+		return 0
 	}
-	return stats, nil
+	return float64(quota) / quotaPerUnit
 }

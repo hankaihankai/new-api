@@ -44,6 +44,20 @@ type UserStatsAccountData struct {
 	CurrentBalance int `json:"current_balance"`
 	// HistoricalConsumption 历史消耗。
 	HistoricalConsumption int `json:"historical_consumption"`
+	// Quota 当前剩余额度原始值。
+	Quota int `json:"quota"`
+	// UsedQuota 已使用额度原始值。
+	UsedQuota int `json:"used_quota"`
+	// TotalQuota 总额度原始值。
+	TotalQuota int `json:"total_quota"`
+	// CurrentBalanceAmount 当前余额金额。
+	CurrentBalanceAmount float64 `json:"current_balance_amount"`
+	// UsedQuotaAmount 已使用额度金额。
+	UsedQuotaAmount float64 `json:"used_quota_amount"`
+	// TotalQuotaAmount 总额度金额。
+	TotalQuotaAmount float64 `json:"total_quota_amount"`
+	// QuotaPerUnit 额度换算基数。
+	QuotaPerUnit float64 `json:"quota_per_unit"`
 }
 
 // UserStatsUsageData 用户使用统计。
@@ -68,8 +82,4 @@ type UserStatsPerformanceData struct {
 	AvgRPM float64 `json:"avg_rpm"`
 	// AvgTPM 平均 TPM。
 	AvgTPM float64 `json:"avg_tpm"`
-	// RecentRPM 最近 60 秒 RPM。
-	RecentRPM int64 `json:"recent_rpm"`
-	// RecentTPM 最近 60 秒 TPM。
-	RecentTPM int64 `json:"recent_tpm"`
 }

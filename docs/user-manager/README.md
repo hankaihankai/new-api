@@ -103,21 +103,26 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
     "username": "testuser",
     "account_data": {
       "current_balance": 0,
-      "historical_consumption": 0
+      "historical_consumption": 0,
+      "quota": 99999705,
+      "used_quota": 295,
+      "total_quota": 100000000,
+      "current_balance_amount": 199.99941,
+      "used_quota_amount": 0.00059,
+      "total_quota_amount": 200,
+      "quota_per_unit": 500000
     },
     "usage_stats": {
-      "request_count": 0,
-      "stat_count": 0
+      "request_count": 18,
+      "stat_count": 18
     },
     "resource_consumption": {
-      "stat_quota": 0,
-      "stat_tokens": 0
+      "stat_quota": 295,
+      "stat_tokens": 12345
     },
     "performance_metrics": {
       "avg_rpm": 0,
-      "avg_tpm": 0,
-      "recent_rpm": 0,
-      "recent_tpm": 0
+      "avg_tpm": 0
     }
   }
 }
@@ -127,8 +132,8 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 
 | 截图模块 | 字段 |
 | --- | --- |
-| 账户数据 / 当前余额 | `account_data.current_balance` |
-| 账户数据 / 历史消耗 | `account_data.historical_consumption` |
+| 账户数据 / 当前余额 | `account_data.current_balance_amount` |
+| 账户数据 / 历史消耗 | `account_data.used_quota_amount` |
 | 使用统计 / 请求次数 | `usage_stats.request_count` |
 | 使用统计 / 统计次数 | `usage_stats.stat_count` |
 | 资源消耗 / 统计额度 | `resource_consumption.stat_quota` |
@@ -136,7 +141,13 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 | 性能指标 / 平均RPM | `performance_metrics.avg_rpm` |
 | 性能指标 / 平均TPM | `performance_metrics.avg_tpm` |
 
-`avg_rpm` 和 `avg_tpm` 仅在同时传入有效 `start_timestamp`、`end_timestamp` 时按该时间段计算；`recent_rpm` 和 `recent_tpm` 固定统计最近 60 秒。
+额度说明：
+
+- `quota`、`used_quota`、`total_quota`、`current_balance`、`historical_consumption` 都是数据库中的原始额度值。
+- 金额换算公式为 `金额 = 原始额度 / quota_per_unit`，默认 `quota_per_unit = 500000`。
+- `current_balance_amount`、`used_quota_amount`、`total_quota_amount` 是后端按上述公式换算后的数值，不包含 `$` 或其他货币符号。
+- `stat_count`、`stat_quota`、`stat_tokens` 来自 `quota_data` 表，其中 `stat_tokens` 使用 `quota_data.token_used` 汇总。
+- `avg_rpm` 和 `avg_tpm` 仅在同时传入有效 `start_timestamp`、`end_timestamp` 时按该时间段计算。
 
 ## 查询用户调用记录
 
