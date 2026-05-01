@@ -10,6 +10,7 @@ import (
 	"github.com/QuantumNous/new-api/i18n"
 	"github.com/QuantumNous/new-api/logger"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/service"
 
 	"github.com/gin-gonic/gin"
 )
@@ -281,6 +282,37 @@ func SetUserQuota(c *gin.Context) {
 	}
 
 	common.ApiSuccess(c, nil)
+}
+
+// GetUserModels 根据用户 ID 查询用户可用模型。
+func GetUserModels(c *gin.Context) {
+	userId, err := strconv.Atoi(c.Param("id"))
+	if err != nil || userId <= 0 {
+		common.ApiErrorI18n(c, i18n.MsgInvalidParams)
+		return
+	}
+
+	user, err := model.GetUserCache(userId)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+
+	groups := service.GetUserUsableGroups(user.Group)
+	models := make([]string, 0)
+	for group := range groups {
+		for _, modelName := range model.GetGroupEnabledModels(group) {
+			if !common.StringsContains(models, modelName) {
+				models = append(models, modelName)
+			}
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "",
+		"data":    models,
+	})
 }
 
 // queryUserQuotaDataAggregate 查询用户指定时间范围内的用量统计。

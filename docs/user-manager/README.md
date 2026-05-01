@@ -239,6 +239,32 @@ Authorization: Bearer <USER_MANAGER_AUTH_KEY>
 - `override`：直接将用户额度覆盖为 `value`，不依赖当前额度。
 - 每次操作都会写入管理日志，标记来源为 `user_manager`。
 
+## 查询用户可用模型
+
+```http
+GET /api/user-manager/users/{user_id}/models
+Authorization: Bearer <USER_MANAGER_AUTH_KEY>
+```
+
+成功响应：
+
+```json
+{
+  "success": true,
+  "message": "",
+  "data": [
+    "gpt-4o",
+    "claude-3-5-sonnet"
+  ]
+}
+```
+
+行为说明：
+
+- 该接口复用 `/api/user/models` 的模型可用性逻辑。
+- 后端先读取用户分组，再计算该用户可使用的分组列表。
+- 返回所有可用分组中已启用的模型名称，并自动去重。
+
 ## 错误场景
 
 | 场景 | 结果 |
